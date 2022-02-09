@@ -120,3 +120,167 @@ const aa = 12; // aa 변수에 12라는 숫자만 할당하고 타입을 정해�
 
 **컴파일 타임 에러**는 프로그램이 성공적으로 컴파일링되는 것을 방해하는 신택스에러(Syntax error)나 파일참조 오류와 같은 문제를 말하며, 이런 경우 컴파일러는 컴파일 타임 에러를 발생시키고 일반적으로 문제를 일으킨 소스코드 라인을 지시해준다.
 만약, 어떤 소스코드가 이미 실행가능한 프로그램으로 컴파일 되었다 할지라도 이것은 여전히 프로그램의 실행중에 버그를 일으킬 수 있다. 예를 들자면, 예상치 못한 오류 또는 충돌로 동작하지 않을 수 있는데 이렇게 프로그램이 실행중에 발생하는 형태의 오류를 **런타임오류** 라고 한다.
+
+## 여러 정적 언어와는 다른 TypeScript만의 특징
+
+- 타입 오류가 있는 코드도 컴파일이 가능합니다.
+
+    TypeScript의 타입 체크와 컴파일은 독립적으로 작동하기 때문에 설령 타입 에러가 있다 하더라도 JavaScript로 컴파일 됩니다. (컴파일은 진행되고 단순히 에러가 있는 곳을 알려주기만 할 뿐입니다.)
+
+    다른 정적언어에서는 절대로 불가능한 일이지만 TypeScript이기에 가능합니다. ㅎㅎ
+
+    아마, 타입 에러가 있더라도 그 코드가 JavaScript로 바뀌어도 잘 작동하기 때문이 아닐까요...? 라는 예상을 해봅니다.
+
+    이런 현상을 막으려면 noEmitOnError 옵션을 true로 설정해주면 됩니다!
+
+- TypeScript의 모든 구문은 런타임에 영향을 주지 않는다. 성능, 타입 연산, 타입 체킹, 심지어 정해놓은 타입이 아닐 수도 있다.
+
+    아시다시피 TypeScript로 적은 코드는 JavaScript로 컴파일하면 TypeScript 내용이 전혀 남지 않게 됩니다!
+
+    따라서 TypeScript의 Type 시스템을 이용하여 정적 타입을 맞추어 코드를 작성하였다 하더라도 JavaScript로 컴파일하여 실행하면, 런타임엔 컴파일 된 JavaScript만 있을 뿐, TypeScript 기능을 전혀 사용할 수 없습니다.
+
+    만약 아래와 같이 Type으로 if문을 사용 할 경우를 가정하면,
+
+    ```typescript
+    interface Square {
+    	width: number
+    }
+
+    interface Rectangle extends Square {
+    	height: number
+    }
+
+    const aa: Rectangle = {
+    	width: 12,
+    	height: 12,
+    };
+
+    function getWidth(square: Square) {
+      // Rectangle is type... so it's deleted when code is compiled
+    	if (square instanceof Rectangle) {
+    		// some code
+    	}
+    }
+    ```
+
+    Rectangle로 Type을 구분했지만, Rectangle은 Type이므로 컴파일시에 사라져버립니다.
+
+    따라서, 같은 로직을 사용하려면 **런타임에서도 유효한 코드**를 만들어야 하는데, 방법은 2가지가 있습니다.
+
+    - 태그된 유니온(Tagged Union)
+    - 클래스 (Class) 사용
+
+    **태그된 유니온(Tagged Union)**
+
+    ```typescript
+    interface Square {
+    	kind: 'square'
+    	width: number
+    }
+
+    interface Rectangle extends Sqaure {
+    	kind: 'rectangle'
+    	height: number
+    }
+
+    const aa: Rectangle = {
+    	kind: 'rectangle',
+    	width: 12,
+    	height: 12,
+    };
+
+    function getWidth(square: Square) {
+      // kind is 'tag'
+    	if (square.kind === 'rectangle') {
+    		// some code
+    	}
+    }
+    ```
+
+    kind라는 새로운 property를 주어 타입을 구분합니다.
+
+    이 방법은 런타임에서도 kind라는 property가 살아있기 때문에 안전합니다.
+
+    **클래스 (Class)**
+
+    class를 사용하면 class 그 자체가 interface type이 됩니다.
+
+    하지만 class는 런타임에서 실존하는 Object이기 때문에 instanceof Rectangle 을 그대로 사용해도 문제없습니다.
+
+    ```typescript
+    class Square {
+    	constructor(width: number) {
+    		this.width = width;
+    	}
+    }
+
+    class Rectangle extends Square {
+    	constructor(width: number, height: number) {
+    		this.width = width;
+    		this.height = height;
+    	}
+    }
+
+    const aa: Rectangle = new Rectangle(12, 12);
+
+    function getWidth(square: Square) {
+    	// ok in Runtime!
+    	if (square instanceof Rectangle) {
+    		// some code
+    	}
+    }
+    ```
+
+- TypeScript만의 함수 오버로드 기능의 특징
+
+    TypeScript에서는 다른 정적 타입 언어들과는 다른 독특한 함수 오버로드 기능을 지원합니다.
+
+    ```typescript
+    function double(x: number): number
+    function double(x: string): string
+    function double(x: any) { return x + x; }
+
+    // X, 구현을 2번하는 것은 불가능합니다!
+    // function double(x: number): number { return x + x }
+    ```
+
+    보이듯이, TypeScript의 함수 오버로드는 Type 제한적입니다.
+
+    위 코드를 컴파일하면 아래와같이 변하기 때문입니다.
+
+    ```javascript
+    function double(x) { return x + x }
+    ```
+
+    TypeScript의 함수 오버로드 기능은 오버로딩 타입 중에서 일치하는 것을 순차적으로 찾아 맞춰줍니다.
+
+    가령 위의 코드는 아래처럼 작동합니다.
+
+    ```typescript
+    double(2); // 4 number
+    double('1'); // 11 string
+    ```
+
+    하지만,,, **이펙티브 타입스크립트에선 함수 오버로드 기능이 아닌 조건부 타입 사용을 권장합니다.**
+
+    이유는, <u>오버로드 기능은 각각 독립적인 타입만 받아들일 수 있습니다.</u>
+
+    따라서 string | number와 같은 타입을 받아들이지 못합니다.
+
+    이는 오버로드 기능의 의도와는 다르기 때문에 좋지 않습니다.
+
+    이를 보완 할 수 있는 것이 아래의 조건부 타입입니다.
+
+    ```typescript
+    // 주의! : 여기서 T를 그대로 return할 경우 string, number가 아닌 literal 값이 됩니다.
+    function double(x: T)<
+      T extends string | number
+    >: T extends string ? string : number
+    function double(x: any){
+     return x + x;
+    }
+    ```
+
+    위의 코드 대로면 double의 paramter로 string, number, string | number 어떤 것이든 받아들일 수 있고, return type으로 string 혹은 number를 전해줄 수 있습니다.
+
+    오버로드 기능의 의도와 정확히 맞는 구현입니다!
