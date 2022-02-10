@@ -284,3 +284,77 @@ const aa = 12; // aa 변수에 12라는 숫자만 할당하고 타입을 정해�
     위의 코드 대로면 double의 paramter로 string, number, string | number 어떤 것이든 받아들일 수 있고, return type으로 string 혹은 number를 전해줄 수 있습니다.
 
     오버로드 기능의 의도와 정확히 맞는 구현입니다!
+
+
+## 자바스크립트의 Duck Typing & 타입스크립트의 구조적 타이핑
+
+TypeScript는 JavaScript의 구동 방식을 그대로 따르기 때문에 JavaScript가 어떻게 작동되는지 살펴볼 필요가 있습니다.
+
+JavaScript는 `duck typing` 기반 입니다.
+
+**duck typing?**
+
+객체가 어떤 타입에 부합하는 변수나 메소드를 가질 경우 객체를 해당 타입에 속하는 것으로 간주하는 방식입니다.
+
+The Duc Test에서 유래된 말로 다음과 같은 명제로 정의됩니다.
+
+“만약 어떤 새가 오리처럼 걷고, 헤엄치고, 꽥꽥거리는 소리를 낸다면 나는 그 새를 오리라고 부를 것이다”
+
+TypeScript는 duck typing을 구현하기 위해 `구조적 타이핑`이라는 개념을 사용합니다.
+
+**구조적 타이핑?**
+
+매개변수 값이 요구사항을 만족한다면, 타입이 무엇인지 신경 쓰지 않는 동작입니다.
+
+```tsx
+interface Vector2D {
+	x: number
+  y: number
+}
+
+function calcLength(v: Vector2D) {
+	return Math.sqrt(v.x * v.x + v.y * v.y);
+}
+
+const aa = {
+	name: 'something',
+	x: 12,
+  y: 12,
+}
+
+// aa는 정확히 Vector2D와 같진 않지만, x와 y 속성을 똑같이 가지고 있다.
+// 열려있는 구조적 타이핑의 특징
+calcLength(aa); // ok!!
+```
+
+이는 미지의 object를 받아들일 때, 유용하여, 테스트 시에 유용하게 사용할 수 있습니다.
+
+어떤 거대한 객체가 있다고 했을 때, 그것을 그대로 mocking하여 type으로 만드는 것이 아닌 필요한 property만 type으로 정해주면 그대로 활용할 수 있습니다.
+
+구조적 타이핑의 `‘열려’`있는 특징이 있다고 할 수 있습니다.
+
+반대는 `‘봉인된 (Sealed)’`, `‘정확한 (Precise)’` 특성입니다.
+
+이는 위 코드의 calcLength(x: Vector2D) 일 때, **x에는 반드시 Vector2D만 와야한다는 것**이 ‘봉인된 (Sealed)’, ‘정확한 (Precise)’ 특성이라고 할 수 있습니다.
+
+구조적 타이핑의 ‘열린’ 특징을 보완하기 위해 `‘상표’`를 사용 할 수 있습니다.
+
+**상표**
+
+상표는 타입시스템으로 런타임에 상표를 검사하는 것과 동일한 효과이지만, 런타임 오버헤드를 없앨 수 있고 추가 속성을 붙일 수 없는 string이나 number 같은 내장 타입도 상표화 할 수 있습니다.
+
+아래는 string 중에서도 절대경로인 것만 brand를 붙여 구별하는 방법입니다.
+
+```tsx
+type AbsolutePath = string & {_brand: 'abs'}
+function listAbsolutePath(path: string) {
+  // path as AbsolutePath도 가능하지만 단언문은 지양해야합니다!!!
+  if (isAbsolutePath(path)) {
+		// ... AbsolutePath인 type만 들어오게 됩니다.
+  }
+}
+// 절대경로인 string만 걸러내 AbsolutePath타입으로 만듭니다.
+function isAbsolutePath(path: string): path is AbsolutePath {
+	return path.startsWith('/');
+}
+```
