@@ -306,7 +306,7 @@ TypeScript는 duck typing을 구현하기 위해 `구조적 타이핑`이라는 
 
 매개변수 값이 요구사항을 만족한다면, 타입이 무엇인지 신경 쓰지 않는 동작입니다.
 
-```tsx
+```typescript
 interface Vector2D {
 	x: number
   y: number
@@ -345,7 +345,7 @@ calcLength(aa); // ok!!
 
 아래는 string 중에서도 절대경로인 것만 brand를 붙여 구별하는 방법입니다.
 
-```tsx
+```typescript
 type AbsolutePath = string & {_brand: 'abs'}
 function listAbsolutePath(path: string) {
   // path as AbsolutePath도 가능하지만 단언문은 지양해야합니다!!!
@@ -358,3 +358,99 @@ function isAbsolutePath(path: string): path is AbsolutePath {
 	return path.startsWith('/');
 }
 ```
+
+### any와 타입 단언을 쓰면 안되는 이유 (+ 꼭 any를 사용해야한다면)
+
+any 타입을 사용하면 타입 체커와 타입스크립트 언어서비스를 무력화시켜 버립니다. any 타입은 진짜 문제점을 감추며, 개발 경험을 나쁘게하고, 타입 시스템의 신뢰도를 떨어뜨립니다. 최대한 사용을 피하도록 합시다!
+
+만약 써야한다면
+
+- **any의 범위를 최소화!**
+
+    ```typescript
+    function processBar(x: any) { ... }
+
+    function f1() {
+      // 이렇게 하면 x는 f1 scope안에서 영원히 any가 되어린다.
+    	const x: any = expressionReturningFoo();
+      processBar(x);
+    }
+
+    function f2() {
+    	const x = expressionReturningFoo();
+    	// parameter를 적용할 때에만 any가 된다.
+      processBar(x as any);
+    }
+
+    // 이런식으로 any로 wjrdydehlsms scope를 최소화해야한다.
+    ```
+
+- **대신 @ts-ignore를 사용**
+- **any를 최대한 구체적으로 변형해서 사용하기**
+    - ex) Array라면 any[]를 사용해 Array의 method를 사용할 수 있도록 유도
+    - ex) Object라면 { [key: string]: any }로 변형해서 사용 (Object와 인데 다른 점은 아래 참고)
+- **any를 진화시키기**
+    - any의 진화는 any 타입에 어떤 값을 할당할 때만 발생.
+    - 물론 애초에 명시적 타입구문을 사용하는게 훨씬 더 좋은 설계!
+- **모르는 값에는 any 대신 unknown을 사용하기**
+
+    > unknown Type은 any 처럼 어떠한 값도 받아들일 수 있지만, 어떠한 타입으로도 할당이 안되기 때문에 사용할 수가 없어 해당 변수를 사용하기 위해선, **타입 변환을 강제**하기 때문에 any보다 훨씬 안전한 타입이라고 할 수 있습니다.
+    >
+
+    **any의 특징**
+
+    1. **어떠한 타입이든** any 타입에 **할당 가능하다.**
+    2. any 타입은 **어떠한 타입으로도 할당 가능하다.**
+
+    **unknown 특징**
+
+    TypeScript 3.0부터 등장, any의 type-safe한 버전이라고 생각하면 된다.
+
+    1. 어떠한 타입이든 unknown 타입에 **할당 가능**합니다.
+    2. **어떠한 타입으로도 할당이 불가능합니다.**
+    3. unknown 타입으로 선언된 변수는 프로퍼티에 접근 할 수 없고, 메소드에도 접근이 불가능합니다. 따라서 인스턴스를 생성할 수도 없습니다. (그야말로 어떤 데이터인지 알 수 없기 때문)
+
+    ```typescript
+    let myVar: unknown = 'hello';
+
+    // 이 변수의 타입은 unknown이므로 어떤 타입의 값이든 할당과 재할당이 가능
+    myVar = 42;
+
+    // **오류** myVar 변수의 타입이 명확하지 않으므로 number 타입 변수에 값 할당이 불가능
+    let age: number = myVar;
+
+    // unknown 타입 변수는 이렇게 사용할 때 타입을 명시해주어야 함
+    // (그렇다고 타입 단언은 하지말자... 짧게 설명하기 위해 이렇게 했다.)
+    // (엄격한 비교나 Type Guard를 통해 Type을 확정해 줄 수 있다.)
+    let age: number = (myVar as number);
+    ```
+
+    **never 특징**
+
+    1. 어떠한 타입도 never 타입에 **할당 불가능**합니다.
+    2. 어떠한 타입으로도 할당 가능합니다.
+
+    ```typescript
+    // never 변수에는 어떤 값도 할당할 수 없습니다.
+    // 그래서 아래의 두 코드는 TypeScript에서 컴파일 오류가 발생합니다.
+    const first: never = 42;
+    const second: never = 'some text';
+
+    // 그렇다면 never는 언제 활용할 수 있는가?
+    // 1. function이 절대로 return하지 않는 다는 것을 명시해 줄 수 있다.
+    function fetchSomething(): never {
+    	throw new Error('Error occured');
+    }
+
+    // 2. 특정 타입 값을 할당받지 못하게 하는 것도 가능
+    // 아래 타입은 string 타입인 경우 never로 추론해 string을 할당받지 못하는 타입이다.
+    type NonString<T> = T extends string ? never ; T;
+    ```
+
+    **void vs never**
+
+    아무것도 반환하지 않는다는 점에서 같은데 뭐가 다른 것일까?
+
+    void - 아무것도 반환하지 않지만, 함수가 종료됨
+
+    never - 함수가 종료되지 않아 절대로 return 하지 않음을 명시 (return 이외에 무한루프 혹은 throw같은 것으로 끝났을 때, 함수의 return type은 never가 된다.)
