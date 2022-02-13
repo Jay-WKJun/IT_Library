@@ -454,3 +454,152 @@ any 타입을 사용하면 타입 체커와 타입스크립트 언어서비스�
     void - 아무것도 반환하지 않지만, 함수가 종료됨
 
     never - 함수가 종료되지 않아 절대로 return 하지 않음을 명시 (return 이외에 무한루프 혹은 throw같은 것으로 끝났을 때, 함수의 return type은 never가 된다.)
+
+**타입 관계 설명 다이어그램**
+
+![타입관계 설명 다이어그램](../assets/TypeScript/type_diagram.png)
+
+- **object vs Object vs {}**
+  - object
+
+    primitive Type을 제외한, 객체 및 배열을 할당 할 수 있습니다. (TypeScript 2.2)
+
+  - Object
+
+    JavaScript에선 모든 객체들은 Object를 상속하는데 그 Object의 타입이 바로 “Object”입니다.
+
+  - {}
+
+    null과 undefined를 제외한 모든 값을 포함합니다. undefined 등장 이전에는 이것을 사용했었습니다.
+
+- **object와 { [key: string]: any }와 다른 점**
+
+```typescript
+function hasTwelveLetterKey(o: { [key: string]: any }) {
+	for (const key in o) {
+		console.log(key, o[key]);  // O
+	}
+}
+
+function hasTwelveLetterKey(o: object) {
+	for (const key in o) {
+		console.log(key, o[key]);  // X Error!
+                      // '{}' 형식에 인덱스 시그니처가 없으므로
+                      // 요소에 암시적으로 'any' 형식이 있습니다.
+	}
+}
+```
+
+## 타입이 집합이라고 생각하기(다른 언어의 extends와 헷갈릴 수 있다.)
+
+### 할당 시에
+
+그 안의 작은 범위의 타입 = 범위가 넓은 타입 (X, 이 타입이 작은 타입과 일치하는지 확신할 수 없다.)
+
+범위가 넓은 타입 = 그 안의 작은 범위의 타입 (O, 작은 범위로 타입이 갱신 됨)
+
+### 타입스크립트 용어와 집합 이론 용어 사이의 대응
+
+| 타입스크립트 용어 | 집합 용어 |
+
+| never | 공집합 |
+
+| 리터럴 타입 | 원소가 1개인 집합 |
+
+| 값이 T에 할당 가능 | ∈ (값이 T의 원소) |
+
+| T1이 T2에 할당 가능 혹은 상속 | T1 ⊂ T2 (부분 집합) |
+
+| T1 \| T2 | T1 ∪ T2 (합집합), OR |
+
+| T1 & T2 | T1 ∩ T2 (교집합), AND |
+
+| unknown | 전체(universal) 집합 |
+
+### 헷갈리기 쉬운 객체끼리 유니온, 인터섹션
+
+type 할당은 아주 간단하지만, 객체 끼리의 유니온과 인터섹션은 객체 안의 property에도 영향이 있기 때문에 헷갈릴 수 있다.
+
+```typescript
+type a = string;
+type b = number;
+
+// type의 union은 매우 직관적이다.
+type union = a | b; // string | number
+```
+
+그렇다면 Object의 경우는 어떨까?
+
+union의 경우 “합집합” 이기 때문에 객체끼리의 프로퍼티까지 함께 합쳐지는 것으로 생각 할 수 있다.
+
+하지만 A | B는 A OR B라는 관점에서 본다면 좀 더 정확 할 것이다.
+
+```typescript
+type a = { propA: 'asdf' };
+type b = { propB: 12 };
+
+// 예상 결과
+// { propA: 'asdf', propB: 12 }
+type union = a | b;  // { propA: 'asdf' } | { propB: 12 }
+
+// 하지만 { 'propA': string } OR { 'propB': number } 라는 관점에서 생각해보면
+// propA를 가진 객체 혹은 propB를 가진 객체가 가능하다! 라고 해석할 수 있다.
+```
+
+반대인, intersection도 마찬가지이다. “교집합” 이기 때문에 never일 것이라고 생각 할 수 있다.
+
+하지만 A & B는 A AND B라는 관점에서 본다면 더 정확하다.
+
+```typescript
+type a = { propA: 'asdf' };
+type b = { propB: 12 };
+
+// 예상 결과
+// never
+type intersection  a & b;  // { propA: 'asdf', propB: 12 }
+
+// 이렇게 생각해 볼수 있다.
+// 1. a와 b는 같은 Object 타입이기 때문에, AND 조건에 부합하여 하나로 합쳐진다.
+// 2. 각자가 가진 propA와 propB는 하나로 합쳐진 Object에 모두 할당된다.
+```
+
+### extends를 집합 관점에서 정확히 이해해보자
+
+extends는 객체 지향 언어들에서 공통적으로 사용되는 것으로, 부모를 상속받은 자식 객체를 만들 때 사용합니다.
+
+따라서 extends를 한 자식 객체들은 부모 객체보다 더 많은 기능들을 사용할 수 있어 **부모보다 더 넓은 범위의 객체가 되게 됩니다.**
+
+TypeScript에서도 다른 언어와 마찬가지로 객체에 extends가 가능합니다.
+
+객체의 extends는 기능적으로 다른 언어와 동일하기 때문에 직관적으로 쉽게 이해할 수 있습니다.
+
+```typescript
+interface Vector1D { x: number }
+// Vector1D는 Vector2D의 서브타입이다.
+interface Vector2D extends Vector1D { y: number }
+// Vector2D는 Vector3D의 서브타입이다.
+interface Vector3D extends Vector2D { y: number }
+
+// 타입의 범위는 Vector3D가 가장 좁다. (가장 구체적이라고도 할 수 있다.)
+```
+
+**문제는, Generic 타입의 extends 입니다!**
+
+```typescript
+// 객체의 상속한다고 생각하면, K는 string의 모든 것을 가진 어떤것이 되는 건가...? 🤪
+function getKey<K extends string>(val: any, key: K) {
+  // ...
+}
+```
+
+이해가 잘 되지 않습니다, string은 애초에 객체도 아니니 말이죠,,,,
+
+하지만, string을 **집합의 관점**으로 생각해본다면, 쉽게 이해할 수 있습니다!
+
+```typescript
+getKey({}, 'x'); // O, 'x'는 string 범위 안에 있습니다.
+getKey({}, Math.random() < 0.5 ? 'a' : 'b'); // O, 'a' | 'b' 는 string 범위 안에 있습니다.
+getKey({}, document.title);  // O, string은 string 범위 안에 있습니다.
+
+getKey({}, 12);  // X, number인 12는 string 범위 밖에 있습니다!
+```
