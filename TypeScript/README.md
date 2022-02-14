@@ -597,3 +597,5 @@ getKey({}, document.title);  // O, string은 string 범위 안에 있습니다.
 
 getKey({}, 12);  // X, number인 12는 string 범위 밖에 있습니다!
 ```
+
+
