@@ -598,4 +598,155 @@ getKey({}, document.title);  // O, string은 string 범위 안에 있습니다.
 getKey({}, 12);  // X, number인 12는 string 범위 밖에 있습니다!
 ```
 
+## 타입 추론
 
+타입스크립트는 적극적으로 타입을 추론합니다!
+
+타입스크립트가 어떻게 타입을 추론하는지, 언제 타입 선언을 작성해야하는지, 타입 추론이 가능해도 명시적으로 타입을 선언해야하는지 이해하는 장입니다!
+
+이를 통해, 불필요한 타입 구문을 줄여 깔끔하고 명확한 코드를 짤 수 있을 것입니다!
+
+### 변수 값 할당과 추론
+
+타입이 지정되지 않은 변수를 초기화할 때, 타입체커는 지정된 값을 가지고 할당 가능한 값들의 집합을 유추합니다.
+
+**Primitive Type의 추론**
+
+```typescript
+// let은 변수에 재 할당이 가능함으로 어느정도 타입을 넓혀서 추론한 string이 된다.
+let a = 'asdf'; // a는 string
+// const는 변수에 재 할당이 불가능함으로 반드시 'asdf'이다
+const c = 'asdf';  // c는 'asdf'
+
+// number도 마찬가지!
+let b = 12;  // b는 number
+const d = 12; // d는 12
+```
+
+**Referece Type의 추론**
+
+primitive 타입의 데이터 형태와는 달리 Referece Type의 타입 추론은 조금 다릅니다!
+
+```typescript
+// a에는 객체의 Reference 주소가 할당되어 불변이지만, 
+// someKey에 대응하는 value는 여전히 가변상태이기 때문에 string이라고 할 수 있다.
+const a = { someKey: 'asdf' }; // a는 { 'someKey': string }
+
+// 객체와 마찬가지로 b는 불변이지만, Array의 내부는 가변상태이기 때문에 string[]이다.
+const b = ['asdf']; // b는 string[]
+```
+
+위의 예를 보듯이, 객체를 const 변수에 할당하였지만, **내부는 let 변수 선언처럼 타입이 추론**되는 것을 볼 수 있습니다. (이런 현상을 ‘타입 넓히기'라고 부르기도 합니다.)
+
+하지만 객체의 내부까지 모두 불변상태로 하고 싶다면 어떻게 해야할까요?
+
+바로 as const라는 단언을 해주면 됩니다!
+
+```typescript
+const a = { someKey: 'asdf' } as const; // a는 { readonly 'someKey': 'asdf' }
+
+const b = ['asdf'] as  string; // b는 string[readonly 'asdf']
+```
+
+as const의 **주의할 점은 최대한 좁은 타입으로 추론하기 때문에 내부 값들의 타입에 모두 readonly가 함께 붙습니다. (내부 절대불변)**
+
+### 타입 좁히기
+
+너무 넓은 타입을 좁혀야 할 때도 있습니다.
+
+유니온 타입 중에 하나를 정해야 하거나, null 혹은 undefined를 걸러낼 때를 생각해 볼 수 있을 것 같습니다!
+
+1. **조건문**
+
+    ```typescript
+    const el = document.getElementById('foo'); // 타입은 HTMLElment | null
+    // 방법 1
+    if (el) {
+      el  // 타입은 HTMLElement
+    } else {
+      el  // 타입은 null
+    }
+
+    // 방법 2 - 객체 자체 타입을 확인
+    if (el instanceof HTMLElement) {
+    	el // 타입은 HTMLElement
+    }
+
+    // 방법 3 - 객체 안의 프로퍼티를 확인
+    if ('title' in el) {
+      // HTMLElement는 title이라는 프로퍼티를 가지고 있다.
+    	el // 타입은 HTMLElement
+    }
+    ```
+
+2. **태그된 유니온**
+
+    객체에 별도의 property를 붙여 객체의 타입을 구분! 런타임에도 property가 남아 있어 안전한 방법입니다!
+
+    ```typescript
+    interface UploadEvent { type: 'upload'; filename: string; contents: string }
+    interface DownloadEnvent { type: 'download'; filename: string; }
+    type AppEvent = UploadEvent | DownloadEnvent;
+    function handleEvent(e: AppEvent) {
+      switch (e.type) {
+    	  case 'download':
+    			e  // 타입이 DownloadEvent
+    			break;
+    	  case 'upload':
+    			e  // 타입이 UploadEvent
+    			break;
+    	}
+    }
+    ```
+
+3. **사용자 정의 타입 가드**
+
+    타입 단언을 대체할 수 있을 만큼 굉장히 범용적인 방법입니다!
+
+    ```typescript
+    // el is HTMLInputElement는 함수의 반환이 true인 경우,
+    // 타입 체커에게 매개변수의 타입을 좁힐 수 있다고 알려줍니다.
+    function isInputElement(el: HTMLElement): el is HTMLInputElement {
+    	return 'value' in el;
+    }
+
+    function getElementContent(el: HTMLElement) {
+    	if (isInputElement(el)) {
+    	  el  // 타입은 HTMLInputElement = 타입을 좁혔다!
+    	} else {
+    	  el  // 타입은 HTMLElement
+    	}
+    }
+    ```
+
+4. **함수를 통한 타입 좁히기**
+
+    일반 for문이나, 조건문은 타입을 좁히는 데, 한계가 있습니다.
+
+    하지만 함수를 통해 타입을 정제하면 훨씬 더 정교하게 타입을 좁힐 수 있습니다.
+
+    대표적인 예시로 Object나 Array의 내장형 함수와 Lodash의 함수 들은 제네릭 타입을 통해 함수 스코프 내부의 타입을 정확히 유지할 수 있고, 함수 타입 별칭을 통해 callback의 타입도 정확하게 유지할 수 있으며, 이를 통해 return 타입까지 더욱 정교하게 좁혀줍니다.
+
+    예를 들어 아래와 같은 예시가 있을 수 있습니다.
+
+    ```typescript
+    interface BAskeballPlayer {
+      name: string;
+    	team: string;
+    	salary: number;
+    }
+    declare const rosters: {[team: string]: BasketballPlayer[]};
+
+    // let allPalyers = [];  // 변수 초기화 시에 값을 바탕으로 암시적으로 any[]로 정해집니다.
+    // 따라서, 변수에 타입을 명시해줘야합니다.
+    let allPalyers: BasketballPlayer[] = [];
+    for (const players of dObject.values(rosters)) {
+    	allPlayers = allPalyers.concat(players);
+    }
+    ```
+
+    위의 문제는 Array.prototype.flat을 이용해 간단하고 타입까지 깔끔하게 해결됩니다.
+
+    ```typescript
+    const allPlayers = Object.values(rosters).flat();  // 타입은 BasketballPlayer[]
+    ```
