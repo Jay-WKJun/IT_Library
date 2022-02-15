@@ -750,3 +750,72 @@ as const의 **주의할 점은 최대한 좁은 타입으로 추론하기 때문
     ```typescript
     const allPlayers = Object.values(rosters).flat();  // 타입은 BasketballPlayer[]
     ```
+
+## 객체 래퍼타입
+
+JavaScript의 primitive type은 7가지가 있습니다.
+
+string, number, boolean, null, undefined, symbol, bigint)
+
+symbol은 ES2015에서 추가, bigint는 정식 type은 아니지만, 최종 확정 단계에 있다고 합니다! (Java에서도 long에 이은 BigInt가 있으니 큰 수를 받을 수 있는 type은 세계적인 추세인 것 같습니다...!)
+
+primitive type은 불변!(Immutable)이며 객체가 아니기 때문에 prototype을 가지지 않아 자체 메소드를 가지지 않습니다.
+
+그런데 JavaScript를 써보신 분들은 아시겠지만 아래와 같은 string type의 메소드를 많이 써보셨을 것입니다.
+
+```typescript
+‘string’.charAt(3);  // i
+```
+
+분명 primitive type은 메소드를 가지지 않는다고 했는데 어떻게 된 일일까요??
+
+알려진대로 charAt은 string의 메소드가 아닙니다. 하지만 JavaScript에는 String이라는 객체 타입이 정의되어있고, JavaScript 내부적으로 string 타입에 메소드가 필요할 때, String 타입으로 래핑(wrap) 후, 메소드를 사용하고 다시 string으로 반환되는 과정을 거치게 됩니다.
+
+String에 몽키패치를 함으로서 wrapper 타입을 관찰할 수 있습니다.
+
+(물론 이렇게 하면 절대로 안됩니다... 몽키패치도 매우 안좋은 습관이에요...🥶)
+
+```typescript
+const originalCharAt = String.prototype.charAt;
+String.prototype.charAt = function(pos) {
+	console.log(this, typeof this, pos)
+	return originalCharAt.call(this, pos);
+}
+
+// 메소드 내의 this가 string이 아닌 String을 가리키고 있습니다.
+// [String: 'primitive'] 'object' 3
+// m
+```
+
+### 래퍼의 생명주기
+
+래퍼는 쓰일 때만 생성되고 바로 버려진다는 점이 특징입니다. 불변성을 확실하게 지켜주는 군요...!
+
+직접 확인해보겠습니다.
+
+```typescript
+new String("hello") === new String("hello")
+// false
+
+x = "hello"
+x.language = "English"
+console.log(x.language); // English
+console.log(x.language); // undefined
+```
+
+위에서 보셨다 시피 처음에 x.language이 붙은 String 래퍼 객체는 한번 사용되고 버려진 다음 새로운 String 래퍼 객체가 x를 감쌋기 때문에 x.language 프로퍼티는 정의되어있지 않는 것입니다.
+
+### TypeScript에서의 래퍼 타입
+
+래퍼 객체와 primitive type은 다음과 같은 관계를 가집니다.
+
+```typescript
+ string ⊂ String
+```
+
+String이 string보다 넓은 범위의 타입이기 때문에
+
+- String에 string을 할당하는 것은 가능하지만
+- string에 String을 할당하는 것은 불가능합니다.
+
+또한, string type대로 사용하여도 String의 메소드들을 모두 사용할 수 있으므로, 굳이 TypeScript에서 래퍼 타입을 사용할 필요는 없을 것 같습니다!
