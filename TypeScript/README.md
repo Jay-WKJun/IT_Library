@@ -819,3 +819,68 @@ String이 string보다 넓은 범위의 타입이기 때문에
 - string에 String을 할당하는 것은 불가능합니다.
 
 또한, string type대로 사용하여도 String의 메소드들을 모두 사용할 수 있으므로, 굳이 TypeScript에서 래퍼 타입을 사용할 필요는 없을 것 같습니다!
+
+## 타입과 인터페이스 차이점
+
+type과 interface는 매우 비슷합니다, 근데 왜 굳이 이 두 가지가 나누어져 있는 것 일까요?
+
+안될 것 같지만, type으로도 interface로도 선언이 가능한 몇가지 예들을 아래 적어보겠습니다.
+
+```typescript
+// 인덱스 시그니쳐
+type TDict = { [key: string]: string };
+interface IDict {
+	[key: string]: string;
+}
+
+// 함수 타입
+type TFn = (x. number) => string;
+// 인터페이스가 된다고...?
+interface IFn {
+	(x: number): string;
+}
+
+// extends
+interface IstateWithPop extends TState {
+	population: number
+}
+type TStateWithPop = IState & { population: number; };
+```
+
+각자만이 가능한 기능을 정리하면 다음과 같습니다.
+
+Interface | type
+--- | ---
+보강기능 | 유니온 타입 가능
+
+### 보강기능
+
+유니온 타입은 유명하니 interface만 가능한 보강기능만 자세히 살펴보도록 하겠습니다!
+
+우선 코드로 보강기능에 대해 살펴보겠습니다.
+
+```typescript
+interface IState {
+	name: string;
+	captial: string;
+}
+interface IState {
+	population: number
+}
+
+const wyoming: IState = {
+	name: 'Wyoming';
+	captial: 'Cheyenne'
+	population: 500000
+}  // 정상
+```
+
+위 코드에서 IState들은 서로 extends나 &로 엮인 관계가 전혀 없지만 두 interface가 병합되어 사용되었습니다.
+
+이렇듯 같은 이름의 interface가 자동으로 병합되는 특징을 ‘보강’이라고 합니다.
+
+대표적인 예로 JavaScript의 예를 들 수 있는데,
+
+ES5의 Array 인터페이스는 lib.es5.d.ts에 정의 되어 있는데, tsconfig에서 버전을 올려 ES2015를 설정하면, 타입스크립트는 lib.es2015.d.ts에 선언된 인터페이스를 병합합니다.
+
+따라서 ES2015에 추가된 find같은 메소드가 Array를 이용할 때, 자동완성으로 등장하고, 그대로 사용할 수 있습니다.
