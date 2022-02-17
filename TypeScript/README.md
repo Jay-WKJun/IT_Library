@@ -884,3 +884,152 @@ const wyoming: IState = {
 ES5의 Array 인터페이스는 lib.es5.d.ts에 정의 되어 있는데, tsconfig에서 버전을 올려 ES2015를 설정하면, 타입스크립트는 lib.es2015.d.ts에 선언된 인터페이스를 병합합니다.
 
 따라서 ES2015에 추가된 find같은 메소드가 Array를 이용할 때, 자동완성으로 등장하고, 그대로 사용할 수 있습니다.
+
+# 타입설계 원리(타입스크립트 사용 뿐만 아니라 어디서든 사용가능)
+
+데이터 타입의 설계는 TypeScript 뿐만 아니라 다른 곳에서도 많이 사용되기에 보편적으로 적용할 수 있는 지식입니다!
+
+## 유효한 객체 Type만 지정 할 것.
+
+아래와 같은 타입을 지정해보겠습니다.
+
+```typescript
+interface Layer {
+	layout: FillLayout | LineLayout | PointLayout;
+  paint: FillPaint | LinePaint | PointPaint;
+}
+```
+
+위의 타입에는 잘못된 점이 있습니다.
+
+layout을 FillLayout을 했다면 paint는 반드시 FillPaint를 해줘야 하고, 나머지도 마찬가지로 layout이 정해지면 paint도 함께 정해집니다.
+
+layout: LineLayout, paint: FillPaint 이런 조합은 안된다는 이야기이죠.
+
+즉, 위의 타입은 유효하지 않은 타입을 만들 가능성이 있습니다.
+
+따라서 수정해보겠습니다!
+
+```typescript
+interface FillLayer {
+  layout: FillLayout
+  paint: FillPaint
+}
+interface LineLayer {
+  layout: LineLayout
+  paint: LinePaint
+}
+interface PointLayer {
+  layout: PointLayout
+  paint: PointPaint
+}
+type Layer = FillLayer | LineLayer | PointLayer;
+```
+
+이제 Layer 타입은 유효한 타입만 가질 수 있습니다!
+
+**유효한 타입만 가질 수 있게 하려면 interface Layer처럼 property에 Union을 주는 것이 아닌 interface 그 자체를 Union해서 구별해주는 편이 낫습니다.**
+
+interface를 Union해서 구별해주면 인스턴스를 확실하게 구별할 수 있는 **강력한 기능인 “유니온 태그”를 사용할 수 있습니다.**
+
+```typescript
+interface FillLayer {
+  type: 'fill';
+  layout: FillLayout
+  paint: FillPaint
+}
+interface LineLayer {
+  type: 'line';
+  layout: LineLayout
+  paint: LinePaint
+}
+interface PointLayer {
+  type: 'paint';
+  layout: PointLayout
+  paint: PointPaint
+}
+type Layer = FillLayer | LineLayer | PointLayer;
+
+function drawLayer() {
+  if (layer.type === 'fill') {
+    const {paint} = layer;  // 타입 FillPaint
+    const {layout} = layer;  // 타입 FillLayout
+  } else if () {
+    const {paint} = layer;  // 타입 LinePaint
+    const {layout} = layer;  // 타입 LineLayout
+  } else {
+    const {paint} = layer;  // 타입 PointPaint
+    const {layout} = layer;  // 타입 PointLayout
+  }
+
+  return {
+    paint,
+    layout,
+  }
+}
+```
+
+만약 layout과 paint가 undefined가 가능하다고 한다면, 굉장히 복잡할 것입니다.
+
+(참고로, layout과 paint는 pair이기 때문에 layout이 없다면 paint도 없다고 가정하겠습니다.)
+
+```typescript
+function drawLayer() {
+	if (layer.type === 'fill') {
+		const {paint} = layer;  // 타입 FillPaint
+		const {layout} = layer;  // 타입 FillLayout
+	} else if () {
+		const {paint} = layer;  // 타입 LinePaint
+		const {layout} = layer;  // 타입 LineLayout
+	} else {
+		const {paint} = layer;  // 타입 PointPaint
+		const {layout} = layer;  // 타입 PointLayout
+	}
+
+	return {
+		paint,
+		layout,
+	}
+}
+
+const res = drawLayer();  // 타입 { paint?, layout? }
+res.paint  // paint | undefined
+res.layout  // layout | undefined
+```
+
+이 역시, interface가 아니라 property에 Union이 되어 있기 때문에 복잡하게 되었습니다.
+
+interface Union으로 고쳐보겠습니다.
+
+```typescript
+type Layer = FillLayer | LineLayer | PointLayer | null;
+
+function drawLayer() {
+	if (!layer) return null;
+
+	if (layer.type === 'fill') {
+		const {paint} = layer;  // 타입 FillPaint
+		const {layout} = layer;  // 타입 FillLayout
+	} else if () {
+		const {paint} = layer;  // 타입 LinePaint
+		const {layout} = layer;  // 타입 LineLayout
+	} else {
+		const {paint} = layer;  // 타입 PointPaint
+		const {layout} = layer;  // 타입 PointLayout
+	}
+
+	return {
+		paint,
+		layout,
+	}
+}
+
+const res = drawLayer();  // 타입 { paint, layout } | null
+// res만 확인하면되서 깔끔!
+if (res) {
+	res.paint  // paint
+	res.layout  // layout
+}
+```
+
+paint와 layout이 있는지는 res만 확인하면 되기 때문에 훨씬 깔끔한 코드가 되었습니다!
