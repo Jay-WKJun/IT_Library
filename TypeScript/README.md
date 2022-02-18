@@ -1033,3 +1033,38 @@ if (res) {
 ```
 
 paint와 layout이 있는지는 res만 확인하면 되기 때문에 훨씬 깔끔한 코드가 되었습니다!
+
+## DOM의 구조와 타입
+
+TypeScript에선 DOM 타입을 각각을 구체적으로 정의했습니다. 따라서 DOM의 계층구조와 각 타입의 특징울 알아야 제대로 사용할 수 있습니다!
+
+### DOM의 계층구조
+
+타입|예시
+---|---
+EventTarget|window, XMLHttpRequest
+Node|document, Text, Comment
+Element|HTMLElement, SVGElement 포함
+HTMLElement|<i>, <b>
+HTML${xxx}Element|<${xxx}>
+
+**EventTarget**
+
+DOM 타입 중 가장 추상화된 타입
+
+이벤트 리스너를 추가하거나 제거하고, 이벤트를 보내는 것밖에 할 수 없습니다.
+
+**Node**
+
+Element보다 추상화된 타입
+
+Element에는 없는 “텍스트 조각”과 “주석”이 이곳에 포함되어 있습니다.
+
+HTMLxxxElement
+
+HTMLElement보다 더 구체적인 타입입니다.
+
+특정 Element는 자신만의 고유한 속성을 가지고 있습니다.
+
+예를 들어, ImageElement에는 src, HTMLInputElement는 value 속성이 있습니다.
+	
