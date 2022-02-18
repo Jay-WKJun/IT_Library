@@ -1045,8 +1045,8 @@ TypeScript에선 DOM 타입을 각각을 구체적으로 정의했습니다. 따
 EventTarget|window, XMLHttpRequest
 Node|document, Text, Comment
 Element|HTMLElement, SVGElement 포함
-HTMLElement|<i>, <b>
-HTML${xxx}Element|<${xxx}>
+HTMLElement|\<i\>, \<b\>
+HTML${xxx}Element|\<${xxx}\>
 
 **EventTarget**
 
