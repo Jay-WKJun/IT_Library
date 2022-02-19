@@ -1068,3 +1068,135 @@ HTMLElement보다 더 구체적인 타입입니다.
 
 예를 들어, ImageElement에는 src, HTMLInputElement는 value 속성이 있습니다.
 	
+## 콜백에서 This의 타입 정하기
+
+this... JavaScript의 this는 아주 복잡하고 이상하기로 유명합니다.
+
+그 이유는 this가 lexical 환경이 아닌, 실행할 당시의 환경에 의해서 정해지기 때문입니다. (보통 다른 언어들은 은 lexical 환경을 참고해 this를 설정합니다.)
+
+따라서 이런 복잡한 this에 type을 붙여준다면 코드가 좀 더 명확해 질 것입니다!
+
+### JavaScript의 this
+
+TypeScript는 JavaScript의 움직임을 그대로 따르기 때문에, 먼저 JavaScript의 this에 대해서 먼저 알아볼 필요가 있습니다.
+
+this는 보통 객체의 현재 인스턴스를 참조할 때, 가장 많이 사용됩니다.
+
+```typescript
+class Some {
+	constructor(val: any) {
+		this.val = val;
+	}
+	showVal() {
+		console.log(this.val);
+	}
+}
+
+const a = new Some(2);
+a.showVal();  // 2
+const b = new Some('nextjs');
+b.showVal();  // nextjs
+```
+
+여기까지는 상식적인 this입니다.
+
+이제 JavaScript의 this가 난해한 이유를 코드로 보겠습니다.
+
+```typescript
+const c = new Some('this is sparta!');
+const method = c.showVal;
+method();  // Error!!!! we can't find val
+// Expected, 'this is sparta!'
+```
+
+분명 c의 showVal 메소드를 변수에 옮겨 실행했을 뿐인데, 예상한 결과와는 다릅니다. 오히려 에러를 일으켜 당황스러울 따름이지요...!
+
+JavaScript의 this는 위에 있는 내용대로 **실행이 될 때의 환경에 따라 this가 정해집니다.**
+
+간단히 말하면, **어떤 객체에 의해 실행되었느냐**, **혹은 실행되는 메소드의 . 앞에 어떤 객체가 있느냐**에 따라 정해집니다.
+
+method의 경우 실행 당시 앞에 아무런 객체도 없지만, 실제론 window의 메소드로서 실행 된 것입니다. (strict mode의 경우 undefined가 되고, node 환경이라면 global이 됩니다.)
+
+- **call, bind**
+
+이런 문제를 해결하기 위해 JavaScript에선 call, bind 등를 사용하여 해당 메소드의 this를 미리 정해줍니다.
+
+```typescript
+const d = new Some(123);
+const mehtod = c.showVal;
+method.call(d);  // 123
+// method의 this가 d로 정해져 실행되었습니다.
+```
+
+- 화살표 함수
+
+위와같은 this의 문제를 해결하는 방법은 한가지 더 있습니다.
+
+```typescript
+class Some {
+	constructor(val: any) {
+		this.val = val;
+	}
+	showVal = () => {
+		console.log(this.val);
+	}
+}
+
+const p = Some('Arrow Function');
+const method = p.showVal;
+method();  // Arrow Function
+const z = Some(678);
+const method2 = z.showVal;  
+method2();  // 678
+```
+
+call, bind 없이도 this가 항상 자신의 인스턴스를 바라보게 되었습니다.
+
+화살표 함수는 **lexical 환경에서 바로 자신의 위 scope의 this를 그대로 따르게 됩니다.**
+
+즉, showVal이 선언 된 환경의 바로 위 scope는 Some 객체이고, 그 객체의 this는 객체 자신이기 때문에 showVal의 this도 항상 객체를 바라보게 됩니다.
+
+### this의 Type정하기
+
+그렇다면 콜백함수의 this의 type은 어떻게 정의할 수 있을까요?
+
+만약 라이브러리를 제공한다고 할 때, 콜백 함수에서 this를 그대로 써야하는 경우가 있을 것입니다.
+
+그런 경우, 라이브러리 사용자에게 this에 관해 정확히 의도를 전달해야할 것입니다.
+
+```typescript
+// fn이라는 콜백 함수의 this는 어떤것인지 설정해주었습니다.
+function addKeyListener(
+	el: HTMLElement,
+	fn: (this: HTMLElement, e: KeyboardEvent) => void
+) {
+	el.addEventListener('keydown', e => {
+		fn.call(el, e);
+
+		// fn(el, e);  error :  1개의 인수가 필요한데, 2개를 가져왔습니다.
+
+		// fn(e);  error : void 형식의 'this' 컨텍스트를 메서드의 'HTMLElement' 형식
+		// 'this'에 할당할 수 없습니다.
+	})
+}
+```
+
+fn 콜백 함수의 this의 type을 확실히 해주어, fn의 this가 항상 HTMLElement type인 것을 확실하게 했습니다.
+
+**이는 사용자가 함수를 넣어줄 때에도 매우 유용하고 편리하며, 타입 안정성도 확보할 수 있습니다.**
+
+```typescript
+declare let el: HTMLElement;
+addKeyListener(el, function(e) {
+	this.innerHTML;  // 정상, 'this'는 HTMLElement 타입
+})
+
+// 콜백의 this가 잘못 설정된 경우 TypeScript가 잡아줍니다.
+class Foo {
+	registerHandler(el: HTMLElement) {
+		addKeyListener(el, (e) => {
+			this.innerHTML;  // 'Foo' 유형에 'innerHTML' 속성이 없습니다.
+		})
+	}
+}
+```
