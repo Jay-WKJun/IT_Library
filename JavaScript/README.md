@@ -459,7 +459,7 @@ eval()은 정말 특별한 경우가 아니면 사용하지 않고, ```eval is e
 
 - Variable Enviroment
 
-  Lexical Enviroment와 같은 내용을 저장하지만, 오로지 초기값 snapshot만을 가지고 있습니다.
+  Lexical Enviroment와 같은 내용을 저장하지만, **오로지 초기값 snapshot**만을 가지고 있습니다.
 
   - enviroment Record(snapshot)
 
@@ -467,11 +467,33 @@ eval()은 정말 특별한 경우가 아니면 사용하지 않고, ```eval is e
 
 - Lexical Enviroment
 
-  Variable Enviroment와 같은 내용을 저장하지만, 시시각각 변하는 정보를 저장합니다.
+  Variable Enviroment와 같은 내용을 저장하지만, **시시각각 변하는 정보를 저장합니다.**
 
   - enviroment Record
 
   - outer Enviroment Reference
 
 - ThisBinding
+
+### enviroment Record와 호이스팅
+
+**현재 컨텍스트와 관련된 코드의 식별자 정보들이 <u>순서대로</u> 저장됩니다.**
+
+컨텍스트를 구성하는 함수에 지정된 **매개변수 식별자**
+
+함수 선언이 있을 경우 **함수 그 자체**
+
+var로 선언된 **변수의 식별자**
+
+위 3가지가 식별자에 해당합니다.
+
+이 정보 수집은 코드가 실행되기 전에 모두 수집되게 되는데,
+
+이러한 행동이 '자바스크립트 엔진은 식별자들을 최상단으로 끌어놀려놓은 다음 실제 코드를 실행한다'라고 생각하게 만드는 원인일 것입니다!
+
+여기서 **'호이스팅(hoisting)'**이라는 개념이 등장하는데, '끌어올리다'라는 뜻으로,
+
+식별자들을 끌어올려 enviroment Record에 기록한 뒤, 해당 변수에 데이터를 할당하는 코드가 나올 때,
+
+데이터를 할당한다 라는 식으로 직관적으로 이해하기 위한 가상의 개념입니다!
 
