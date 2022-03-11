@@ -452,3 +452,26 @@ eval()은 정말 특별한 경우가 아니면 사용하지 않고, ```eval is e
 (다만, 함수만 실행 컨텍스트를 만든다는 것은 ES5까지만 그랬었고 ES6부터는 중괄호({})도 실행 컨텍스트를 형성하게 되어있습니다.
 
 중괄호 범위로 형성된 컨텍스트 범위를 '블록 스코프'라고 하며 let, const, class, strict mode 등이 대표적으로 블록 스코프에서만 활용할 수 있는 것들입니다.)
+
+## 실행 컨텍스트의 구성
+
+실행 컨텍스트는 크게 3가지로 구성되어 있습니다.
+
+- Variable Enviroment
+
+  Lexical Enviroment와 같은 내용을 저장하지만, 오로지 초기값 snapshot만을 가지고 있습니다.
+
+  - enviroment Record(snapshot)
+
+  - outer Enviroment Reference(snapshot)
+
+- Lexical Enviroment
+
+  Variable Enviroment와 같은 내용을 저장하지만, 시시각각 변하는 정보를 저장합니다.
+
+  - enviroment Record
+
+  - outer Enviroment Reference
+
+- ThisBinding
+
