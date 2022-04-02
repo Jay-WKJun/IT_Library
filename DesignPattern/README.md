@@ -275,3 +275,311 @@ Observable 객체와 Observer 객체는 서로 뭘 주든 알아서 하기 때�
 이렇게 **느슨한 결합**을 가진 코드는 변화에 굉장히 유연합니다!!
 
 변화에 유연한 코드는 좋은 코드라고 할 수 있죠!! 프로그래머가 지향해야 마땅합니다.
+
+# 팩토리 패턴
+
+팩토리라는 말처럼 인스턴스를 만들어내는 객체 공장을 만드는 것을 말합니다!
+
+사실 JavaScript나 Java에서 new를 사용하면 인스턴스를 생성할 수 있는데 굳이 팩토리 패턴이 필요한 이유가 뭔지 알아보겠습니다!
+
+## 팩토리 패턴을 적용하지 않았을 때
+
+피자 가게에서 피자를 만드는 것을 코드로 만들어 보겠습니다.
+
+```typescript
+class PizzaStore {
+  // 여러 종류의 Pizza를 아우르는 interface입니다.
+  pizza: Pizza;
+
+  orderPizza(type: string) {
+    if (type === 'cheese') {
+      pizza = new CheesePizza();
+    } else if (type === 'greek') {
+      pizza = new GreekPizza();
+    } else if (type === 'peperoni') {
+      pizza = new PepperoniPizza();
+    }
+
+    pizza.prepare();
+    pizza.bake();
+    pizza.cut();
+    pizza.pack();
+    return pizza;
+  }
+}
+```
+
+PIzzaStore의 orderPizza에서 Pizza interface에 해당하는 여러 종류의 피자를 만듭니다.
+
+여기서 GreekPizza가 잘 안팔리니 빼고, 다른 피자를 넣어보겠습니다.
+
+```typescript
+orderPizza(type: string) {
+  // 피자 구현체를 결정하는 로직이 변경되었습니다.
+  if (type === 'cheese') {
+    pizza = new CheesePizza();
+  } else if (type === 'peperoni') {
+    pizza = new PepperoniPizza();
+  } else if (type === 'shrimp') {
+    pizza = new ShrimpPizza();
+  } else if (type === 'chicago') {
+    pizza = new ChicagoPizza();
+  }
+
+  // pizza를 만드는 과정은 바뀌지 않습니다.
+  pizza.prepare();
+  pizza.bake();
+  pizza.cut();
+  pizza.pack();
+  return pizza;
+}
+```
+
+여기서, pizza의 종류를 바꾸려면 orderPizza에서 직접 코드를 수정해야합니다.
+
+하지만, orderPizza 안에선 바뀌지 않는 코드가 혼재 되어 있습니다! 코드를 분리해야 할 것 같습니다!
+
+두가지의 원칙에서 코드를 분리합니다.
+
+1. 변경에는 닫혀있고 확장에는 열려있어야 한다.
+2. 관심사의 분리
+
+orderpizza에서는 크게 피자 종류를 결정하는 부분, 피자를 만들어 return하는 부분으로 나눌 수 있습니다.
+
+여기서 피자 종류를 결정하는 부분이 변경되는 부분이기 때문에 캡슐화하도록하겠습니다.
+
+## Simple Factory Pattern
+
+```typescript
+class PizzaStore  {
+  factory: SimplePizzaFactory;
+
+  constructor (factory: SimplePizzaFactory) {
+    this.factory = factory;
+  }
+
+  orderPizza(type: string) {
+    // 이제 피자 종류를 결정하는 작업을 SimplePizzaFactory라는 객체에 위임했습니다.
+    // 이제 피자 종류를 추가, 제거를 위해 orderPizza를 수정하지 않아도 됩니다!!!!
+    const pizza: Pizza = factory.createPizza(type);
+
+    pizza.prepare();
+    pizza.bake();
+    pizza.cut();
+    pizza.pack();
+
+    return pizza;
+  }
+}
+```
+
+이제 SimplePizzaFactory라는 객체가 createPizza라는 메소드를 통해 Pizza의 인스턴스를 대신 만들어 줍니다.
+
+이렇게 <u>어떤 인터페이스의 인스턴스를 대신 생성해주는 패턴을 **팩토리 패턴** 이라고 하고</u>
+
+그 중에 <u>하나의 간단한 Factory 객체를 통해 인스턴스를 만드는 것을 **Simple Factory Pattern**</u>라고 합니다.
+
+이제 피자 종류를 수정하기 위해 orderPizza를 수정하지 않아도 됩니다!
+
+## Factory method Pattern
+
+여기서 PizzaStore를 확장해보도록 해보겠습니다!
+
+```typescript
+// PizzaStore가 SimplePizzaFactory의 인스턴스에 종속되었습니다.
+const nyFactory: SimplePizzaFactory = new NYPizzaFactory();
+nyStore = new PizzaStore(nyFactory);
+nyStore.orderPizza("Veggie");
+
+const chicagoFactory: SimplePizzaFactory = new ChicagoPizzaFactory();
+chicagoStore = new PizzaStore(chicagoFactory);
+chicagoStore.orderPizza("Veggie");
+```
+
+위 코드를 보면, SimplePizzaFactory가 PizzaStore의 종류를 정해주고 있습니다.
+
+외부에 의존하는 객체는 좋지 못합니다.
+
+맥락에도 맞지 않을 뿐더러, 이해하기도 힘들어 가독성도 해치게 됩니다.
+
+또한, 어떠한 PizzaStore든, 그냥 PizzaStore이기 때문에 해당 객체의 종류를 구분하는 것도 쉽지 않습니다.
+
+마지막으로, 모든 PizzaStore를 아우르는 pizza 종류를 SimplePizzaFactory에서 구현해야하는데, 이는 쓸데없이 비효율적입니다.
+
+따라서, 수정해보겠습니다.
+
+우선, PizzaStore와 피자 제작 코드를 하나로 묶어야 합니다.
+
+Chicago의 PizzaStore에선 자신들만의 Pizza만을 만들 것이기 때문입니다.
+
+정확히 필요한 로직만을 남길 수 있습니다.
+
+```typescript
+class PizzaStore {
+  orderPizza() {
+    const pizza: Pizza = this.createPizza(type);
+
+    pizza.prepare();
+    pizza.bake();
+    pizza.cut();
+    pizza.pack();
+
+    return pizza;
+  }
+
+  createPizza(type: string) {
+  }
+}
+
+class ChicagoPizzaStore extends PizzaStore {
+  // factory에 위임했던 createPizza를 PizzaStore로 가져왔습니다.
+  createPizza(type: string) {
+    if (type === 'cheese') {
+      return new ChicagoCheesePizza();
+    } else if (type === 'veggie') {
+      return new ChicagoVeggiePizza();
+    } else if (type === 'pepperoni') {
+      return new ChicagoPepperoniPizza();
+    }
+  }
+}
+
+class NYPizzaStore extends PizzaStore {
+  // 각각 자기만의 Pizza를 설정합니다.
+  createPizza(type: string) {
+    if (type === 'cheese') {
+      return new NYCheesePizza();
+    } else if (type === 'veggie') {
+      return new NYVeggiePizza();
+    } else if (type === 'pepperoni') {
+      return new NYPepperoniPizza();
+    }
+  }
+}
+```
+
+위 코드를 통해 PizzaStore의 확장과 함께 pizza 인스턴스를 만드는 메소드를 성공적으로 확장했습니다.
+
+이렇게 변화에는 닫혀있고 확장에는 열려있는 코드를 만들었습니다!
+
+이런 <u>특정 인스턴스를 만들어주는 메소드를 사용하는 패턴을 **팩토리 메소드 패턴**</u>이라고 합니다.
+
+## 추상 팩토리 패턴
+
+<u>**추상 팩토리 패턴**은 여러 팩토리 메소드를 가지고 있는 팩토리 객체를 사용하는 패턴</u>입니다.
+
+Pizza는 여러가지 재료가 필요한데 여러 재료들을 만들어주는 Factory를 만들어보겠습니다.
+
+```typescript
+interface PizzaIngredientFactory {
+  createSauce: () => Sauce;
+  createVeggie: () => Veggie;
+  createCheese: () => Cheese;
+  createPepperoni: () => Pepperoni;
+}
+
+class ChicagoPizzaIngredientFactory implements PizzaIngredientFactory {
+  // Sauce의 구현체인 ChicagoSauce를 반환!
+  createSauce() {
+    return new ChicagoSauce();
+  }
+
+  createVeggie() {
+    return new ChicagoVeggie();
+  }
+
+  createCheese() {
+    return new ChicagoCheese();
+  }
+
+  createPepperoni() {
+    return new ChicagoPepperoni();
+  }
+}
+
+class NYPizzaIngredientFactory implements PizzaIngredientFactory {
+  // Sauce의 구현체인 NYSauce를 반환!
+  createSauce() {
+    return new NYSauce();
+  }
+
+  createVeggie() {
+    return new NYVeggie();
+  }
+
+  createCheese() {
+    return new NYCheese();
+  }
+
+  createPepperoni() {
+    return new NYPepperoni();
+  }
+}
+```
+
+이제 ingredientFactory를 이용해 Pizza를 만들어보겠습니다.
+
+```typescript
+class Pizza {
+  // 이 메소드에서 재료들을 준비합니다.
+  prepare() {
+  }
+}
+
+class CheesePizza extends Pizza {
+  ingredientFactory: PizzaIngredientFactory;
+
+  // 각 지점의 ingredientFactory 종류에 따라 재료가 변합니다!
+  constructor(ingredientFactory: PizzaIngredientFactory) {
+    this.ingredientFactory = ingredientFactory;
+  }
+
+  // 치즈 피자에서 필요한 재료만 만들어 저장합니다. (굳이 PizzaIngredientFactory의 모든 메소드를 사용할 필요는 없습니다.)
+  prepare() {
+    sauce = ingredientFactory.createSauce();
+    cheese = ingredientFactory.createCheese();
+  }
+}
+
+class VeggiePizza extends Pizza {
+  ingredientFactory: PizzaIngredientFactory;
+
+  // 각 지점의 ingredientFactory 종류에 따라 재료가 변합니다!
+  constructor(ingredientFactory: PizzaIngredientFactory) {
+    this.ingredientFactory = ingredientFactory;
+  }
+
+  // 야채 피자에서 필요한 재료만 만들어 저장합니다.
+  prepare() {
+    sauce = ingredientFactory.createSauce();
+    veggie = ingredientFactory.createVeggie();
+  }
+}
+```
+
+이제 지점에서 피자를 만들어 보겠습니다!
+
+```typescript
+class NYPIzzaStore extends PizzaStore {
+  createPizza(item: string) {
+    const pizza: Pizza = null;
+    // NY만의 재료를 만들어주는 NYPizzaIngredientFactory를 만들었습니다!
+    ingredientFactory = new NYPizzaIngredientFactory();
+
+    if (type === 'cheese') {
+      // 똑같은 CheesePizza이지만, NYPizzaIngredientFactory를 통해
+      // NY의 재료를 통해 CheesePizza를 만들어냅니다!
+      pizza = new CheesePizza(ingredientFactory);
+    } else if (type === 'veggie') {
+      pizza = new VeggiePizza(ingredientFactory);
+    }
+
+    // ,,,pizza를 만드는 로직....
+    return pizza;
+  }
+}
+```
+
+만약, Pizza의 재료들을 직접 코드로 구현했다면, 각 지점을 구분하고 각 지점이 사용하는 재료들의 인스턴스를 직접 return해주는 로직이었을 것입니다.
+
+하지만, ingredientFactory라는 추상 팩토리를 통해 각 Pizza들의 인스턴스 제작 로직을 수정하지 않아도 각 지점에 따른 재료를 구분해서 만들 수 있게 되었습니다!
