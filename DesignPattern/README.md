@@ -583,3 +583,15 @@ class NYPIzzaStore extends PizzaStore {
 만약, Pizza의 재료들을 직접 코드로 구현했다면, 각 지점을 구분하고 각 지점이 사용하는 재료들의 인스턴스를 직접 return해주는 로직이었을 것입니다.
 
 하지만, ingredientFactory라는 추상 팩토리를 통해 각 Pizza들의 인스턴스 제작 로직을 수정하지 않아도 각 지점에 따른 재료를 구분해서 만들 수 있게 되었습니다!
+
+# 데코레이션 패턴
+
+상속은 mother class를 상속해 코드를 재사용 할 수 있지만 컴파일 되는 순간 정의되어버려 유연하지 못합니다.
+
+그렇게 전략 패턴을 통해 런타임에서도 문제없이 class의 type을 변화시킬 수도 있지만, 데코레이터라는 또다른 유연한 방법도 존재합니다!
+
+### TypeScript로 데코레이션 패턴 구현해보기
+
+구현 후기, 역시 JS는 함수형 언어이다...
+
+![Code Sanbox](https://codesandbox.io/s/decorator-pattern-by-typescript-zl14xp?file=/src/index.ts);
