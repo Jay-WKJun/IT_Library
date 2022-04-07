@@ -595,3 +595,51 @@ class NYPIzzaStore extends PizzaStore {
 구현 후기, 역시 JS는 함수형 언어이다...
 
 ![Code Sanbox](https://codesandbox.io/s/decorator-pattern-by-typescript-zl14xp?file=/src/index.ts);
+
+# 싱글톤 패턴
+
+애플리케이션에 단 하나의 인스턴스만 생성하고 그것을 전역적으로 접근하여 사용할 수 있도록하는 패턴입니다.
+
+모든 애플리케이션 안에 유일한 인스턴스이기 때문에, 해당 객체는 어떻게 생겼고 현재 어떤 데이터가 들어있는지 까지 직관적으로 파악할 수 있습니다!
+
+또한, 같은 형태의 다른 인스턴스로 인한 참조형 특유의 문제가 없습니다!
+
+## 싱글톤 패턴을 이용시 주의 할 점
+
+바로 <u>**비동기</u>로 싱글톤 객체의 데이터를 다룰 때** 입니다.
+
+<u>이건 비동기로 변수를 다룰 때 주의해야 할 점과 완벽하게 일치합니다.</u>
+
+만약 아래와 같은 상황이 있다고 가정해 보겠습니다.
+
+비동기적으로 singleton의 num을 하나씩 늘려주는 것을 의도한 코드입니다.
+
+```typescript
+function Singleton() {
+  this.num = 1;
+  this.setNum = (num: number) => {
+    this.num = num;
+  };
+}
+
+let singleton: typeof Singleton = new Singleton();
+
+function asyncSetNum(num: number) {
+  setTimeout(() => {
+    singleton.setNum(num + 1);
+    console.log(singleton);
+  }, Math.random() * 1000);
+}
+
+for (let i = 0; i <= 5; i++) {
+  asyncSetNum(singleton.num);
+}
+```
+
+결과는 5번 모두 num = 2 입니다.
+
+이유는 asyncSetNum에 넣어준 num은 변화되지 않은 채로 모두 1이고, 그 1에 1을 더한 값을 singleton에 계속 set한 것입니다.
+
+이런 간단한 예제 이외에도 singleton의 property를 읽어 변형 시키는 여러 비동기적인 시도가 있을 것입니다.
+
+그럴 때, 비동기 함수가 가진 데이터가 과연 최신 데이터인지는 잘 파악해야 할 것 같습니다!
