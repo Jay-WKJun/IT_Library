@@ -6,26 +6,9 @@
 
 언제든 다시 와서 복습할 수 있는 공간을 목표로 합니다. 🗂
 
-## 개발자 blog
+# Context
 
-[메이커 준의 블로그](https://blog.makerjun.com/)
+Published | Content
+--- | ---
+23.04.26 | [React fiber](./React/ReactFiber.md)
 
-[지나가던 개발](https://www.zigae.com/)
-
-[Parang Tech Blog](https://parang.tech/)
-
-## 개발 교육 플랫폼
-
-[NextStep](https://edu.nextstep.camp/)
-
-## 행사 컨퍼런스
-
-[JSCONF korea 9월 16일(금) - 9월 17일(토))](https://2022.jsconf.kr/ko)
-
-## 개발 연합동아리
-
-[넥스터즈](http://teamnexters.com/)
-
-[디프만](https://www.depromeet.com/)
-
-[메쉬업](https://mash-up.kr/)
